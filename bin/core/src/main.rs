@@ -80,7 +80,12 @@ async fn app() -> anyhow::Result<()> {
     .nest("/client", ts_client::router())
     .nest_service("/", serve_dir)
     .fallback_service(frontend_index)
-    .layer(cors()?)
+    .layer(
+      CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any),
+    )
     .into_make_service();
 
   let socket_addr =
@@ -101,14 +106,16 @@ async fn app() -> anyhow::Result<()> {
     .context("Invalid ssl cert / key")?;
     axum_server::bind_rustls(socket_addr, ssl_config)
       .serve(app)
-      .await?
+      .await
+      .context("failed to start https server")
   } else {
     info!("🔓 Core SSL Disabled");
     info!("Komodo Core starting on http://{socket_addr}");
-    axum_server::bind(socket_addr).serve(app).await?
+    axum_server::bind(socket_addr)
+      .serve(app)
+      .await
+      .context("failed to start http server")
   }
-
-  Ok(())
 }
 
 #[tokio::main]
@@ -116,21 +123,8 @@ async fn main() -> anyhow::Result<()> {
   let mut term_signal = tokio::signal::unix::signal(
     tokio::signal::unix::SignalKind::terminate(),
   )?;
-
-  let app = tokio::spawn(app());
-
   tokio::select! {
-    res = app => return res?,
-    _ = term_signal.recv() => {},
+    res = tokio::spawn(app()) => res?,
+    _ = term_signal.recv() => Ok(()),
   }
-
-  Ok(())
-}
-
-fn cors() -> anyhow::Result<CorsLayer> {
-  let cors = CorsLayer::new()
-    .allow_origin(Any)
-    .allow_methods(Any)
-    .allow_headers(Any);
-  Ok(cors)
 }
