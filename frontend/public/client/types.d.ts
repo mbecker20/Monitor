@@ -604,6 +604,9 @@ export type Execution =
     type: "BatchDestroyStack";
     params: BatchDestroyStack;
 } | {
+    type: "TestAlerter";
+    params: TestAlerter;
+} | {
     type: "Sleep";
     params: Sleep;
 };
@@ -1012,6 +1015,19 @@ export type AlertData =
 {
     type: "None";
     data: {};
+}
+/**
+ * The user triggered a test of the
+ * Alerter configuration.
+ */
+ | {
+    type: "Test";
+    data: {
+        /** The id of the alerter */
+        id: string;
+        /** The name of the alerter */
+        name: string;
+    };
 }
 /** A server could not be reached. */
  | {
@@ -1894,15 +1910,6 @@ export interface SingleDiskUsage {
     /** Total size of the disk in GB */
     total_gb: number;
 }
-/** Info for network interface usage. */
-export interface SingleNetworkInterfaceUsage {
-    /** The network interface name */
-    name: string;
-    /** The ingress in bytes */
-    ingress_bytes: number;
-    /** The egress in bytes */
-    egress_bytes: number;
-}
 export declare enum Timelength {
     OneSecond = "1-sec",
     FiveSeconds = "5-sec",
@@ -1947,8 +1954,6 @@ export interface SystemStats {
     network_ingress_bytes?: number;
     /** Network egress usage in MB */
     network_egress_bytes?: number;
-    /** Network usage by interface name (ingress, egress in bytes) */
-    network_usage_interface?: SingleNetworkInterfaceUsage[];
     /** The rate the system stats are being polled from the system */
     polling_rate: Timelength;
     /** Unix timestamp in milliseconds when stats were last polled */
@@ -2062,6 +2067,7 @@ export declare enum Operation {
     UpdateAlerter = "UpdateAlerter",
     RenameAlerter = "RenameAlerter",
     DeleteAlerter = "DeleteAlerter",
+    TestAlerter = "TestAlerter",
     CreateServerTemplate = "CreateServerTemplate",
     UpdateServerTemplate = "UpdateServerTemplate",
     RenameServerTemplate = "RenameServerTemplate",
@@ -4529,26 +4535,6 @@ export interface ExportResourcesToToml {
     /** Whether to include variables */
     include_variables?: boolean;
 }
-/** Find resources matching a common query. Response: [FindResourcesResponse]. */
-export interface FindResources {
-    /** The mongo query as JSON */
-    query?: MongoDocument;
-    /** The resource variants to include in the response. */
-    resources?: ResourceTarget["type"][];
-}
-/** Response for [FindResources]. */
-export interface FindResourcesResponse {
-    /** The matching servers. */
-    servers: ServerListItem[];
-    /** The matching deployments. */
-    deployments: DeploymentListItem[];
-    /** The matching builds. */
-    builds: BuildListItem[];
-    /** The matching repos. */
-    repos: RepoListItem[];
-    /** The matching procedures. */
-    procedures: ProcedureListItem[];
-}
 /**
  * **Admin only.**
  * Find a user.
@@ -4855,14 +4841,12 @@ export interface SystemStatsRecord {
     disk_used_gb: number;
     /** Total disk size in GB */
     disk_total_gb: number;
-    /** Breakdown of individual disks, ie their usages, sizes, and mount points */
+    /** Breakdown of individual disks, including their usage, total size, and mount point */
     disks: SingleDiskUsage[];
-    /** Network ingress usage in bytes */
+    /** Total network ingress in bytes */
     network_ingress_bytes?: number;
-    /** Network egress usage in bytes */
+    /** Total network egress in bytes */
     network_egress_bytes?: number;
-    /** Network usage by interface name (ingress, egress in bytes) */
-    network_usage_interface?: SingleNetworkInterfaceUsage[];
 }
 /** Response to [GetHistoricalServerStats]. */
 export interface GetHistoricalServerStatsResponse {
@@ -6414,6 +6398,15 @@ export interface SetUsersInUserGroup {
     /** The user ids or usernames to hard set as the group's users. */
     users: string[];
 }
+/** Info for network interface usage. */
+export interface SingleNetworkInterfaceUsage {
+    /** The network interface name */
+    name: string;
+    /** The ingress in bytes */
+    ingress_bytes: number;
+    /** The egress in bytes */
+    egress_bytes: number;
+}
 /** Configuration for a Slack alerter. */
 export interface SlackAlerterEndpoint {
     /** The Slack app webhook url */
@@ -6499,6 +6492,11 @@ export interface StopStack {
 export interface TerminationSignalLabel {
     signal: TerminationSignal;
     label: string;
+}
+/** Tests an Alerters ability to reach the configured endpoint. Response: [Update] */
+export interface TestAlerter {
+    /** Name or id */
+    alerter: string;
 }
 /** Info for the all system disks combined. */
 export interface TotalDiskUsage {
@@ -7086,6 +7084,9 @@ export type ExecuteRequest = {
     type: "LaunchServer";
     params: LaunchServer;
 } | {
+    type: "TestAlerter";
+    params: TestAlerter;
+} | {
     type: "RunSync";
     params: RunSync;
 };
@@ -7146,9 +7147,6 @@ export type ReadRequest = {
 } | {
     type: "ListUserGroups";
     params: ListUserGroups;
-} | {
-    type: "FindResources";
-    params: FindResources;
 } | {
     type: "GetProceduresSummary";
     params: GetProceduresSummary;
