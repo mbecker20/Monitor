@@ -484,6 +484,7 @@ export type Execution =
 	| { type: "StopStack", params: StopStack }
 	| { type: "DestroyStack", params: DestroyStack }
 	| { type: "BatchDestroyStack", params: BatchDestroyStack }
+	| { type: "TestAlerter", params: TestAlerter }
 	| { type: "Sleep", params: Sleep };
 
 /** Allows to enable / disabled procedures in the sequence / parallel vec on the fly */
@@ -924,6 +925,16 @@ export enum SeverityLevel {
 export type AlertData = 
 	/** A null alert */
 	| { type: "None", data: {
+}}
+	/**
+	 * The user triggered a test of the
+	 * Alerter configuration.
+	 */
+	| { type: "Test", data: {
+	/** The id of the alerter */
+	id: string;
+	/** The name of the alerter */
+	name: string;
 }}
 	/** A server could not be reached. */
 	| { type: "ServerUnreachable", data: {
@@ -1809,16 +1820,6 @@ export interface SingleDiskUsage {
 	total_gb: number;
 }
 
-/** Info for network interface usage. */
-export interface SingleNetworkInterfaceUsage {
-	/** The network interface name */
-	name: string;
-	/** The ingress in bytes */
-	ingress_bytes: number;
-	/** The egress in bytes */
-	egress_bytes: number;
-}
-
 export enum Timelength {
 	OneSecond = "1-sec",
 	FiveSeconds = "5-sec",
@@ -1864,8 +1865,6 @@ export interface SystemStats {
 	network_ingress_bytes?: number;
 	/** Network egress usage in MB */
 	network_egress_bytes?: number;
-	/** Network usage by interface name (ingress, egress in bytes) */
-	network_usage_interface?: SingleNetworkInterfaceUsage[];
 	/** The rate the system stats are being polled from the system */
 	polling_rate: Timelength;
 	/** Unix timestamp in milliseconds when stats were last polled */
@@ -1983,6 +1982,7 @@ export enum Operation {
 	UpdateAlerter = "UpdateAlerter",
 	RenameAlerter = "RenameAlerter",
 	DeleteAlerter = "DeleteAlerter",
+	TestAlerter = "TestAlerter",
 	CreateServerTemplate = "CreateServerTemplate",
 	UpdateServerTemplate = "UpdateServerTemplate",
 	RenameServerTemplate = "RenameServerTemplate",
@@ -4747,28 +4747,6 @@ export interface ExportResourcesToToml {
 	include_variables?: boolean;
 }
 
-/** Find resources matching a common query. Response: [FindResourcesResponse]. */
-export interface FindResources {
-	/** The mongo query as JSON */
-	query?: MongoDocument;
-	/** The resource variants to include in the response. */
-	resources?: ResourceTarget["type"][];
-}
-
-/** Response for [FindResources]. */
-export interface FindResourcesResponse {
-	/** The matching servers. */
-	servers: ServerListItem[];
-	/** The matching deployments. */
-	deployments: DeploymentListItem[];
-	/** The matching builds. */
-	builds: BuildListItem[];
-	/** The matching repos. */
-	repos: RepoListItem[];
-	/** The matching procedures. */
-	procedures: ProcedureListItem[];
-}
-
 /**
  * **Admin only.**
  * Find a user.
@@ -5109,14 +5087,12 @@ export interface SystemStatsRecord {
 	disk_used_gb: number;
 	/** Total disk size in GB */
 	disk_total_gb: number;
-	/** Breakdown of individual disks, ie their usages, sizes, and mount points */
+	/** Breakdown of individual disks, including their usage, total size, and mount point */
 	disks: SingleDiskUsage[];
-	/** Network ingress usage in bytes */
+	/** Total network ingress in bytes */
 	network_ingress_bytes?: number;
-	/** Network egress usage in bytes */
+	/** Total network egress in bytes */
 	network_egress_bytes?: number;
-	/** Network usage by interface name (ingress, egress in bytes) */
-	network_usage_interface?: SingleNetworkInterfaceUsage[];
 }
 
 /** Response to [GetHistoricalServerStats]. */
@@ -6843,6 +6819,16 @@ export interface SetUsersInUserGroup {
 	users: string[];
 }
 
+/** Info for network interface usage. */
+export interface SingleNetworkInterfaceUsage {
+	/** The network interface name */
+	name: string;
+	/** The ingress in bytes */
+	ingress_bytes: number;
+	/** The egress in bytes */
+	egress_bytes: number;
+}
+
 /** Configuration for a Slack alerter. */
 export interface SlackAlerterEndpoint {
 	/** The Slack app webhook url */
@@ -6938,6 +6924,12 @@ export interface StopStack {
 export interface TerminationSignalLabel {
 	signal: TerminationSignal;
 	label: string;
+}
+
+/** Tests an Alerters ability to reach the configured endpoint. Response: [Update] */
+export interface TestAlerter {
+	/** Name or id */
+	alerter: string;
 }
 
 /** Info for the all system disks combined. */
@@ -7434,6 +7426,7 @@ export type ExecuteRequest =
 	| { type: "RunAction", params: RunAction }
 	| { type: "BatchRunAction", params: BatchRunAction }
 	| { type: "LaunchServer", params: LaunchServer }
+	| { type: "TestAlerter", params: TestAlerter }
 	| { type: "RunSync", params: RunSync };
 
 /** Configuration for the registry to push the built image to. */
@@ -7459,7 +7452,6 @@ export type ReadRequest =
 	| { type: "ListUserTargetPermissions", params: ListUserTargetPermissions }
 	| { type: "GetUserGroup", params: GetUserGroup }
 	| { type: "ListUserGroups", params: ListUserGroups }
-	| { type: "FindResources", params: FindResources }
 	| { type: "GetProceduresSummary", params: GetProceduresSummary }
 	| { type: "GetProcedure", params: GetProcedure }
 	| { type: "GetProcedureActionState", params: GetProcedureActionState }
